@@ -40,6 +40,7 @@ try:
         if not success:
             print("웹캠을 찾을 수 없습니다.")
             continue
+        image = cv2.cvtColor(cv2.flip(image, 1), cv2.COLOR_BGR2RGB)
 
         # 이미지를 BGR에서 RGB로 변환 (MediaPipe는 RGB를 사용)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)

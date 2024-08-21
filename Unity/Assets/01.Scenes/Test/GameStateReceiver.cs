@@ -7,10 +7,11 @@ using System.Threading;
 using System.Diagnostics;
 using System.IO;
 using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
 
 public class GameStateReceiver : MonoBehaviour
 {
-    [SerializeField] public string gameIndex = "Zero";
+    [SerializeField] public string gameIndex = "0";
     [SerializeField] private bool runInBackground = true;
 
     private UdpClient udpClient;
@@ -23,18 +24,22 @@ public class GameStateReceiver : MonoBehaviour
     private Process pythonProcess;
     private bool isPythonRunning = false;
 
-    
-
     [System.Serializable]
     public class GameState
     {
+        public string gameIndex;
         public string currentStage;
         public string stageComplete;
         public string finalComplete;
     }
 
+    public List<GameObject> Stage_1_States;
+    public List<GameObject> Stage_2_States;
+
     public GameState currentGameState = new GameState();
     public GameState previousGameState = new GameState();
+
+    private int currentState = 0;
 
     void Start()
     {
@@ -77,14 +82,22 @@ public class GameStateReceiver : MonoBehaviour
         try
         {
             pythonProcess = new Process();
-            pythonProcess.StartInfo.FileName = "python";  // Use pythonw for background execution
-            pythonProcess.StartInfo.Arguments = pythonScriptPath;
+            pythonProcess.StartInfo.FileName = "python";  // 또는 전체 경로를 사용: @"C:\Python39\python.exe"
+            pythonProcess.StartInfo.Arguments = $"\"{pythonScriptPath}\" {gameIndex}";
             pythonProcess.StartInfo.UseShellExecute = false;
             pythonProcess.StartInfo.CreateNoWindow = true;
             pythonProcess.StartInfo.RedirectStandardOutput = true;
             pythonProcess.StartInfo.RedirectStandardError = true;
-            pythonProcess.OutputDataReceived += (sender, e) => UnityEngine.Debug.Log("Python output: " + e.Data);
-            pythonProcess.ErrorDataReceived += (sender, e) => UnityEngine.Debug.LogError("Python error: " + e.Data);
+            pythonProcess.OutputDataReceived += (sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                    UnityEngine.Debug.Log("Python output: " + e.Data);
+            };
+            pythonProcess.ErrorDataReceived += (sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                    UnityEngine.Debug.LogError("Python error: " + e.Data);
+            };
 
             pythonProcess.Start();
             pythonProcess.BeginOutputReadLine();
@@ -102,7 +115,7 @@ public class GameStateReceiver : MonoBehaviour
     private string GetPythonScriptPath()
     {
         string gamesFolderPath = Path.Combine(Application.streamingAssetsPath, "Games");
-        string scriptName = $"Game_{gameIndex}.py";
+        string scriptName = $"game.py";
         string fullPath = Path.Combine(gamesFolderPath, scriptName);
 
         if (File.Exists(fullPath))
@@ -129,11 +142,11 @@ public class GameStateReceiver : MonoBehaviour
             try
             {
                 pythonProcess.Kill();
-                pythonProcess.WaitForExit(5000);  // Wait up to 5 seconds for the process to exit
+                pythonProcess.WaitForExit(5000);
                 if (!pythonProcess.HasExited)
                 {
                     UnityEngine.Debug.LogWarning("Python process did not exit in time. Forcing termination.");
-                    pythonProcess.Kill();  // Force terminate if it doesn't exit in time
+                    pythonProcess.Kill();
                 }
                 pythonProcess.Close();
                 UnityEngine.Debug.Log("Python script stopped.");
@@ -220,10 +233,17 @@ public class GameStateReceiver : MonoBehaviour
             previousGameState = currentGameState;
             currentGameState = new GameState
             {
+                gameIndex = jsonObject["game_index"]?.ToString(),
                 currentStage = jsonObject["current_stage"]?.ToString(),
                 stageComplete = jsonObject["stage_complete"]?.ToString(),
                 finalComplete = jsonObject["final_complete"]?.ToString()
             };
+
+            if (currentGameState.gameIndex != gameIndex)
+            {
+                gameIndex = currentGameState.gameIndex;
+                UnityEngine.Debug.Log($"Game Index updated to: {gameIndex}");
+            }
         }
         catch (Exception e)
         {
@@ -233,20 +253,79 @@ public class GameStateReceiver : MonoBehaviour
 
     void CheckStateChanges()
     {
+        if (currentGameState.gameIndex == "0" && currentGameState.currentStage == "0")
+        {
+            ResetAllStages();
+        }
+
+        if (currentGameState.gameIndex != previousGameState.gameIndex)
+        {
+            UnityEngine.Debug.Log($"Game Index changed to: {currentGameState.gameIndex}");
+        }
+
         if (currentGameState.currentStage != previousGameState.currentStage)
         {
             UnityEngine.Debug.Log($"Current Stage changed to: {currentGameState.currentStage}");
-
+            UpdateStageVisibility();
         }
 
         if (currentGameState.stageComplete != previousGameState.stageComplete && currentGameState.stageComplete == "True")
         {
             UnityEngine.Debug.Log("Stage completed!");
+            ProgressState();
         }
 
         if (currentGameState.finalComplete != previousGameState.finalComplete && currentGameState.finalComplete == "True")
         {
             UnityEngine.Debug.Log("Game completed!");
+        }
+    }
+
+    void UpdateStageVisibility()
+    {
+        ResetAllStages();
+
+        if (currentGameState.currentStage == "1" && currentState < Stage_1_States.Count)
+        {
+            Stage_1_States[currentState].SetActive(true);
+        }
+        else if (currentGameState.currentStage == "2" && currentState < Stage_2_States.Count)
+        {
+            Stage_2_States[currentState].SetActive(true);
+        }
+    }
+
+    void ProgressState()
+    {
+        if (currentGameState.currentStage == "1")
+        {
+            currentState++;
+            if (currentState >= Stage_1_States.Count)
+            {
+                currentState = 0;
+            }
+        }
+        else if (currentGameState.currentStage == "2")
+        {
+            currentState++;
+            if (currentState >= Stage_2_States.Count)
+            {
+                currentState = 0;
+            }
+        }
+
+        UpdateStageVisibility();
+    }
+
+    void ResetAllStages()
+    {
+        foreach (var stageObject in Stage_1_States)
+        {
+            stageObject.SetActive(false);
+        }
+        foreach (var stageObject in Stage_2_States)
+        {
+            stageObject.SetActive(false);
         }
     }
 

@@ -130,9 +130,13 @@ with mp_hands.Hands(
                 for idx, (finger, state) in enumerate(finger_states):
                     if finger // 1000 == 2:
                         LR, fin = 'Left', finger % 100
+                        cv2.putText(image, f"{LR} Finger {fin}: {state}", (10, 30 + idx * 30), 
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,0,0), 2)
                         left_hand_state.append((finger, state))
                     if finger // 1000 == 1:
                         LR, fin = 'Right', finger % 100
+                        cv2.putText(image, f"{LR} Finger {fin}: {state}", (image.shape[1] - 300, 30 + idx * 30), 
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,255), 2)
                         right_hand_state.append((finger, state))
 
         # 현재 단계의 정답과 비교
@@ -147,17 +151,22 @@ with mp_hands.Hands(
                         game_state['current_stage'] = str(current_stage)
                         game_state['stage_complete'] = 'True'
                         send_game_state()
-
+                    cv2.putText(image, f"Stage {current_stage}", (image.shape[1] - 300, image.shape[0] - 30), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2)
                 else:
                     stage_complete = False
-
+                    # game_state['current_stage'] = str(current_stage)
+                    # game_state['stage_complete'] = 'False'
+                    # send_game_state()
 
         # 성공 메시지 표시
         if stage_complete and time.time() - stage_complete_time < success_message_duration:
+            cv2.putText(image, "success!", (int(image.shape[1]/2) - 50, int(image.shape[0]/2)), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 2, (0,255,0), 3)
             # 성공 메시지 표시 후 stage_complete를 False로 변경
             game_state['stage_complete'] = 'False'
             send_game_state()
-
+            # if time.time() - stage_complete_time >= success_message_duration:
 
         # 모든 단계 완료 시 메시지 표시
         if current_stage == len(right_answers):
@@ -165,12 +174,16 @@ with mp_hands.Hands(
             while time.time() < end_time:
                 _, frame = cap.read()
                 frame = cv2.flip(frame, 1)
+                cv2.putText(frame, "All steps completed!", (int(frame.shape[1]/2) - 150, int(frame.shape[0]/2)), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0,255,0), 3)
+                cv2.imshow("Hand Tracking", frame)
                 cv2.waitKey(1)
             
             game_state['final_complete'] = 'True'
             send_game_state()
             break
 
+        cv2.imshow("Hand Tracking", image)
         if cv2.waitKey(1) == ord('q'):
             break
 

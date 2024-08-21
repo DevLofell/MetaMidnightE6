@@ -11,7 +11,7 @@ using System.Diagnostics;
 using System.IO;
 using Debug = UnityEngine.Debug;
 
-public class HandTrackingLineRenderer : MonoBehaviour
+public class DualHandLandmarksReceiver : MonoBehaviour
 {
     public GameObject[] leftHandPoints;
     public GameObject[] rightHandPoints;

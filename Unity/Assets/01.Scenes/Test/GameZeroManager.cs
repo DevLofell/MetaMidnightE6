@@ -31,8 +31,8 @@ public class GameZeroManager : MonoBehaviour
 
     void Update()
     {
-        // GameStateReceiver로부터 현재 스테이지 정보 가져오기
-        int newStage = int.Parse(gameStateReceiver.currentGameState.currentStage);
+       /* // GameStateReceiver로부터 현재 스테이지 정보 가져오기
+        //int newStage = int.Parse(gameStateReceiver.currentGameState.currentStage);
         bool newGameCompleted = gameStateReceiver.currentGameState.finalComplete == "True";
 
         // 스테이지가 변경되었거나 게임이 완료되었을 때 업데이트
@@ -41,7 +41,7 @@ public class GameZeroManager : MonoBehaviour
             currentStage = newStage;
             isGameCompleted = newGameCompleted;
             UpdateStageImage();
-        }
+        }*/
     }
 
     private void UpdateStageImage()

@@ -9,6 +9,6 @@ EditorBuildSettings:
     path: Assets/01.Scenes/Midnight_ProjectMainTitle.unity
     guid: 0286e220d3dfc2342abafe3da8ed14ec
   - enabled: 1
-    path: Assets/01.Scenes/Midnight_Project.unity
-    guid: fb77b48c83fe1a2498d01caa682bc4af
+    path: Assets/01.Scenes/BuildScene/Midnight_Project 1.unity
+    guid: c0cc5f1f0f3527e48aad6db34c588298
   m_configObjects: {}
