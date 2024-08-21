@@ -8,36 +8,98 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-public class HandTrackingCustomModel : MonoBehaviour
+public class HandTrackingLineRenderer : MonoBehaviour
 {
-    public Transform leftHandParent;
-    public Transform rightHandParent;
-    public Transform[] leftHandJoints;
-    public Transform[] rightHandJoints;
+    public GameObject[] leftHandPoints;
+    public GameObject[] rightHandPoints;
+    public LineRenderer[] leftHandConnections;
+    public LineRenderer[] rightHandConnections;
 
     private UdpClient udpClient;
     private Thread receiveThread;
-    private int receivePort = 5052;
+    private int receivePort = 5053;
     private bool isRunning = true;
     private string receivedData = string.Empty;
     private object dataLock = new object();
 
     public float handScaleFactor = 0.1f;
     public float zScaleFactor = 0.1f;
-    public Vector3 handOffset = Vector3.zero;  // 전역 위치 오프셋
+    public Vector3 handOffset = new Vector3(0f, 0f, 0.5f);
 
-    // 전역 회전 조정을 위한 변수들
-    public Vector3 rotationAdjustmentAxis = Vector3.forward;
-    public float rotationAdjustmentAngle = 0f;
+    private readonly int[][] handConnections = new int[][]
+    {
+        new int[] {0, 1, 2, 3, 4},
+        new int[] {0, 5, 6, 7, 8},
+        new int[] {0, 9, 10, 11, 12},
+        new int[] {0, 13, 14, 15, 16},
+        new int[] {0, 17, 18, 19, 20}
+    };
 
-    // 추가적인 방향 벡터 조정을 위한 변수들
-    public Vector3 palmDirectionAdjustment = Vector3.forward;
-    public Vector3 thumbDirectionAdjustment = Vector3.right;
+    private Color[] fingerColors = new Color[]
+    {
+        Color.red,    // 엄지
+        Color.green,  // 검지
+        Color.blue,   // 중지
+        Color.yellow, // 약지
+        Color.magenta // 소지
+    };
 
     void Start()
     {
+        CreateHandPoints();
+        CreateHandConnections();
         InitializeUDP();
     }
+
+    void CreateHandPoints()
+    {
+        leftHandPoints = new GameObject[21];
+        rightHandPoints = new GameObject[21];
+
+        for (int i = 0; i < 21; i++)
+        {
+            leftHandPoints[i] = CreateSphere($"LeftHand_Point_{i}", Vector3.zero);
+            rightHandPoints[i] = CreateSphere($"RightHand_Point_{i}", Vector3.zero);
+        }
+    }
+
+    void CreateHandConnections()
+    {
+        leftHandConnections = new LineRenderer[5];
+        rightHandConnections = new LineRenderer[5];
+
+        for (int i = 0; i < 5; i++)
+        {
+            leftHandConnections[i] = CreateLineRenderer($"LeftHand_Connection_{i}", fingerColors[i]);
+            rightHandConnections[i] = CreateLineRenderer($"RightHand_Connection_{i}", fingerColors[i]);
+        }
+    }
+
+    GameObject CreateSphere(string name, Vector3 position)
+    {
+        GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        sphere.name = name;
+        sphere.transform.localScale = Vector3.one * 0.01f;
+        sphere.transform.position = position;
+        sphere.transform.SetParent(this.transform);
+        return sphere;
+    }
+
+    LineRenderer CreateLineRenderer(string name, Color color)
+    {
+        GameObject lineObj = new GameObject(name);
+        lineObj.transform.SetParent(this.transform);
+        LineRenderer line = lineObj.AddComponent<LineRenderer>();
+        line.startWidth = 0.002f;
+        line.endWidth = 0.002f;
+        line.positionCount = 5;
+        line.useWorldSpace = true;
+        line.material = new Material(Shader.Find("Sprites/Default"));
+        line.startColor = color;
+        line.endColor = color;
+        return line;
+    }
+
     void InitializeUDP()
     {
         udpClient = new UdpClient(receivePort);
@@ -46,7 +108,6 @@ public class HandTrackingCustomModel : MonoBehaviour
         receiveThread.Start();
         Debug.Log($"UDP initialized on port {receivePort}");
     }
-
 
     private void ReceiveData()
     {
@@ -61,7 +122,6 @@ public class HandTrackingCustomModel : MonoBehaviour
                 {
                     receivedData = data;
                 }
-                Debug.Log($"Received data: {data}");
             }
             catch (Exception e)
             {
@@ -69,6 +129,7 @@ public class HandTrackingCustomModel : MonoBehaviour
             }
         }
     }
+
     void Update()
     {
         string data;
@@ -86,8 +147,8 @@ public class HandTrackingCustomModel : MonoBehaviour
         try
         {
             JObject jsonObject = JObject.Parse(data);
-            ProcessHandData(jsonObject, "left", leftHandJoints, leftHandParent);
-            ProcessHandData(jsonObject, "right", rightHandJoints, rightHandParent);
+            ProcessHandData(jsonObject, "left", leftHandPoints, leftHandConnections);
+            ProcessHandData(jsonObject, "right", rightHandPoints, rightHandConnections);
         }
         catch (JsonException je)
         {
@@ -99,7 +160,7 @@ public class HandTrackingCustomModel : MonoBehaviour
         }
     }
 
-    void ProcessHandData(JObject jsonObject, string handKey, Transform[] joints, Transform handParent)
+    void ProcessHandData(JObject jsonObject, string handKey, GameObject[] points, LineRenderer[] connections)
     {
         if (jsonObject.TryGetValue(handKey, out JToken handToken))
         {
@@ -108,92 +169,67 @@ public class HandTrackingCustomModel : MonoBehaviour
                 HandLandmarks handLandmarks = handToken.ToObject<HandLandmarks>();
                 if (handLandmarks != null && handLandmarks.landmarks != null && handLandmarks.landmarks.Length > 0)
                 {
-                    UpdateHandModel(handLandmarks, joints, handParent);
+                    UpdateHand(handLandmarks, points, connections);
                 }
                 else
                 {
-                    HideHand(handParent);
+                    HideHand(points, connections);
                 }
             }
             catch (JsonException je)
             {
                 Debug.LogError($"Error deserializing {handKey} hand data: {je.Message}");
-                HideHand(handParent);
+                HideHand(points, connections);
             }
         }
         else
         {
-            HideHand(handParent);
+            HideHand(points, connections);
         }
     }
 
-    void UpdateHandModel(HandLandmarks landmarks, Transform[] joints, Transform handParent)
+    void UpdateHand(HandLandmarks landmarks, GameObject[] points, LineRenderer[] connections)
     {
-        Vector3 wristPosition = Vector3.zero;
-        Quaternion wristRotation = Quaternion.identity;
-
-        if (landmarks.landmarks.Length > 0)
+        for (int i = 0; i < landmarks.landmarks.Length && i < points.Length; i++)
         {
-            wristPosition = ConvertToUnityPosition(landmarks.landmarks[0]);
-            Vector3 palmDirection = (ConvertToUnityPosition(landmarks.landmarks[9]) - wristPosition).normalized;
-            Vector3 thumbDirection = (ConvertToUnityPosition(landmarks.landmarks[2]) - wristPosition).normalized;
+            LandmarkData landmark = landmarks.landmarks[i];
+            Vector3 position = new Vector3(
+                landmark.x * handScaleFactor,
+                -landmark.y * handScaleFactor,
+                -landmark.z * zScaleFactor
+            ) + handOffset;
 
-            // 방향 벡터 조정 적용
-            palmDirection = Vector3.Normalize(palmDirection + palmDirectionAdjustment);
-            thumbDirection = Vector3.Normalize(thumbDirection + thumbDirectionAdjustment);
-
-            wristRotation = CalculateRotation(palmDirection, thumbDirection);
+            points[i].transform.position = position;
+            points[i].SetActive(true);
         }
 
-        // 전역 위치 오프셋 적용
-        //handParent.position = wristPosition + handOffset;
-        //handParent.position = Vector3.zero;
-
-        // 전역 회전 조정 적용
-        Quaternion globalRotationAdjustment = Quaternion.AngleAxis(rotationAdjustmentAngle, rotationAdjustmentAxis);
-        handParent.rotation = globalRotationAdjustment * wristRotation;
-
-        for (int i = 1; i < landmarks.landmarks.Length && i < joints.Length; i++)
+        for (int i = 0; i < connections.Length; i++)
         {
-            Vector3 jointPosition = ConvertToUnityPosition(landmarks.landmarks[i]);
-            Vector3 jointDirection = jointPosition - wristPosition;
+            Vector3[] linePositions = new Vector3[5];
+            for (int j = 0; j < 5 && j < handConnections[i].Length; j++)
+            {
+                int index = handConnections[i][j];
+                if (index < points.Length)
+                {
+                    linePositions[j] = points[index].transform.position;
+                }
+            }
+            connections[i].SetPositions(linePositions);
+            connections[i].gameObject.SetActive(true);
+        }
+    }
 
-            int parentIndex = (i - 1) / 4 * 4;
-            Vector3 parentPosition = ConvertToUnityPosition(landmarks.landmarks[parentIndex]);
-            Vector3 parentDirection = parentPosition - wristPosition;
-
-            float angle = Vector3.Angle(parentDirection, jointDirection);
-            Vector3 rotationAxis = Vector3.Cross(parentDirection, jointDirection).normalized;
-
-            joints[i].localRotation = Quaternion.AngleAxis(angle, rotationAxis);
+    void HideHand(GameObject[] points, LineRenderer[] connections)
+    {
+        foreach (var point in points)
+        {
+            point.SetActive(false);
         }
 
-        //handParent.localScale = Vector3.one * handScaleFactor;
-        handParent.gameObject.SetActive(true);
-    }
-
-    Vector3 ConvertToUnityPosition(LandmarkData landmark)
-    {
-        return new Vector3(
-            landmark.x * handScaleFactor,
-            -landmark.y * handScaleFactor,
-            -landmark.z * zScaleFactor
-        );
-    }
-
-    Quaternion CalculateRotation(Vector3 palmDirection, Vector3 thumbDirection)
-    {
-        Vector3 palmNormal = Vector3.Cross(palmDirection, thumbDirection).normalized;
-        Vector3 adjustedThumbDirection = Vector3.Cross(palmNormal, palmDirection).normalized;
-
-        return Quaternion.LookRotation(palmDirection, adjustedThumbDirection);
-    }
-
-
-    void HideHand(Transform handParent)
-    {
-        //Vector3.Angle()
-        handParent.gameObject.SetActive(false);
+        foreach (var connection in connections)
+        {
+            connection.gameObject.SetActive(false);
+        }
     }
 
     void OnApplicationQuit()
