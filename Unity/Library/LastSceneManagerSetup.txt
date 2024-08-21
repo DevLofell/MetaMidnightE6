@@ -1,5 +1,5 @@
 sceneSetups:
-- path: Assets/01.Scenes/SampleScene.unity
+- path: Assets/HRCAsset/Scene/02.Summer.unity
   isLoaded: 1
   isActive: 1
   isSubScene: 0
