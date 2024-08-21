@@ -118,8 +118,8 @@ MonoBehaviour:
     y: 0
     width: 318.66663
     height: 911.3333
-  m_MinSize: {x: 275, y: 50}
-  m_MaxSize: {x: 4000, y: 4000}
+  m_MinSize: {x: 276, y: 71}
+  m_MaxSize: {x: 4001, y: 4021}
   m_ActualView: {fileID: 17}
   m_Panes:
   - {fileID: 17}
@@ -149,7 +149,7 @@ MonoBehaviour:
   m_MinSize: {x: 300, y: 100}
   m_MaxSize: {x: 24288, y: 16192}
   vertical: 0
-  controlID: 116
+  controlID: 114
   draggingID: 0
 --- !u!114 &7
 MonoBehaviour:
@@ -681,7 +681,7 @@ MonoBehaviour:
     m_SkipHidden: 0
     m_SearchArea: 1
     m_Folders:
-    - Assets
+    - Assets/HRCAsset
     m_Globs: []
     m_OriginalText: 
     m_ImportLogFlags: 0
@@ -689,16 +689,16 @@ MonoBehaviour:
   m_ViewMode: 1
   m_StartGridSize: 16
   m_LastFolders:
-  - Assets
+  - Assets/HRCAsset
   m_LastFoldersGridSize: 16
   m_LastProjectPath: C:\github\MetaMidnightE6\Unity
   m_LockTracker:
     m_IsLocked: 0
   m_FolderTreeState:
-    scrollPos: {x: 0, y: 79}
-    m_SelectedIDs: 6a5f0000
-    m_LastClickedID: 24426
-    m_ExpandedIDs: 000000006a5f000000ca9a3bffffff7f
+    scrollPos: {x: 0, y: 259}
+    m_SelectedIDs: e45b0000
+    m_LastClickedID: 23524
+    m_ExpandedIDs: 00000000be5b0000e45b000000ca9a3bffffff7f
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -726,7 +726,7 @@ MonoBehaviour:
     scrollPos: {x: 0, y: 0}
     m_SelectedIDs: 
     m_LastClickedID: 0
-    m_ExpandedIDs: 000000006a5f0000
+    m_ExpandedIDs: 00000000be5b0000
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -753,7 +753,7 @@ MonoBehaviour:
   m_ListAreaState:
     m_SelectedInstanceIDs: 
     m_LastClickedInstanceID: 0
-    m_HadKeyboardFocusLastEvent: 0
+    m_HadKeyboardFocusLastEvent: 1
     m_ExpandedInstanceIDs: c6230000e0650000f46b0000be770000
     m_RenameOverlay:
       m_UserAcceptedRename: 0
@@ -1175,7 +1175,7 @@ MonoBehaviour:
   m_Rotation:
     m_Target: {x: 0.0076022795, y: 0.98022264, z: -0.1984727, w: 0.032467674}
     speed: 2
-    m_Value: {x: 0.0075971917, y: 0.97956663, z: -0.19833986, w: 0.032445945}
+    m_Value: {x: 0.0076022795, y: 0.98022264, z: -0.1984727, w: 0.032467674}
   m_Size:
     m_Target: 5.5152607
     speed: 2
@@ -1241,9 +1241,9 @@ MonoBehaviour:
   m_SceneHierarchy:
     m_TreeViewState:
       scrollPos: {x: 0, y: 0}
-      m_SelectedIDs: 64f6ffff
+      m_SelectedIDs: 
       m_LastClickedID: 0
-      m_ExpandedIDs: 2cfbffff
+      m_ExpandedIDs: 30fbffff
       m_RenameOverlay:
         m_UserAcceptedRename: 0
         m_Name: 
