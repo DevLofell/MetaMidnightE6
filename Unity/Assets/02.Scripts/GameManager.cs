@@ -13,6 +13,8 @@ public class GameManager : MonoBehaviour
 
     public static GameManager Instance;
 
+    public List<GameObject> gameList = new List<GameObject>();
+
     public void Awake()
     {
         if (Instance == null)
@@ -35,5 +37,10 @@ public class GameManager : MonoBehaviour
     void Update()
     {
         
+    }
+
+    void OnGameStarted(int index)
+    {
+
     }
 }
