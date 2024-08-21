@@ -7,6 +7,9 @@ using System.Threading;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Diagnostics;
+using System.IO;
+using Debug = UnityEngine.Debug;
 
 public class HandTrackingLineRenderer : MonoBehaviour
 {
@@ -17,7 +20,7 @@ public class HandTrackingLineRenderer : MonoBehaviour
 
     private UdpClient udpClient;
     private Thread receiveThread;
-    private int receivePort = 5053;
+    private int receivePort = 5052;
     private bool isRunning = true;
     private string receivedData = string.Empty;
     private object dataLock = new object();
@@ -44,11 +47,128 @@ public class HandTrackingLineRenderer : MonoBehaviour
         Color.magenta // 소지
     };
 
+    private Process pythonProcess;
+    private bool isPythonRunning = false;
+
+    private const string HandLayerName = "Hand";
+    private int handLayerId;
+
+    void Awake()
+    {
+        handLayerId = LayerMask.NameToLayer(HandLayerName);
+        if (handLayerId == -1)
+        {
+            Debug.LogError($"Layer '{HandLayerName}' not found. Please create this layer in Unity.");
+        }
+    }
+
+    void OnEnable()
+    {
+        StartPythonScript();
+    }
+
+    void OnDisable()
+    {
+        StopPythonScript();
+    }
+
     void Start()
     {
         CreateHandPoints();
         CreateHandConnections();
         InitializeUDP();
+    }
+
+    private void StartPythonScript()
+    {
+        if (isPythonRunning)
+        {
+            Debug.Log("Python script is already running.");
+            return;
+        }
+
+        string pythonScriptPath = GetPythonScriptPath();
+        if (string.IsNullOrEmpty(pythonScriptPath))
+        {
+            Debug.LogError("Python script path is not valid!");
+            return;
+        }
+
+        try
+        {
+            pythonProcess = new Process();
+            pythonProcess.StartInfo.FileName = "python";
+            pythonProcess.StartInfo.Arguments = pythonScriptPath;
+            pythonProcess.StartInfo.UseShellExecute = false;
+            pythonProcess.StartInfo.CreateNoWindow = true;
+            pythonProcess.StartInfo.RedirectStandardOutput = true;
+            pythonProcess.StartInfo.RedirectStandardError = true;
+            pythonProcess.OutputDataReceived += (sender, e) => Debug.Log("Python output: " + e.Data);
+            pythonProcess.ErrorDataReceived += (sender, e) => Debug.LogError("Python error: " + e.Data);
+
+            pythonProcess.Start();
+            pythonProcess.BeginOutputReadLine();
+            pythonProcess.BeginErrorReadLine();
+
+            isPythonRunning = true;
+            Debug.Log($"Python script started: {pythonScriptPath}");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Failed to start Python script: {e.Message}");
+        }
+    }
+
+    private string GetPythonScriptPath()
+    {
+        string scriptName = "handtrack.py";
+        string folderName = "Games";
+        string folderpath = Path.Combine(Application.streamingAssetsPath, folderName);
+        string fullPath = Path.Combine(folderpath, scriptName);
+
+        if (File.Exists(fullPath))
+        {
+            return fullPath;
+        }
+        else
+        {
+            Debug.LogError($"Python script not found: {fullPath}");
+            return null;
+        }
+    }
+
+    private void StopPythonScript()
+    {
+        if (!isPythonRunning)
+        {
+            Debug.Log("No Python script is running.");
+            return;
+        }
+
+        if (pythonProcess != null && !pythonProcess.HasExited)
+        {
+            try
+            {
+                pythonProcess.Kill();
+                pythonProcess.WaitForExit(5000);  // Wait up to 5 seconds for the process to exit
+                if (!pythonProcess.HasExited)
+                {
+                    Debug.LogWarning("Python process did not exit in time. Forcing termination.");
+                    pythonProcess.Kill();  // Force terminate if it doesn't exit in time
+                }
+                pythonProcess.Close();
+                Debug.Log("Python script stopped.");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Error stopping Python script: {e.Message}");
+            }
+            finally
+            {
+                pythonProcess = null;
+                isPythonRunning = false;
+            }
+        }
     }
 
     void CreateHandPoints()
@@ -78,10 +198,12 @@ public class HandTrackingLineRenderer : MonoBehaviour
     GameObject CreateSphere(string name, Vector3 position)
     {
         GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        sphere.layer = LayerMask.NameToLayer("Hand");
         sphere.name = name;
         sphere.transform.localScale = Vector3.one * 0.01f;
         sphere.transform.position = position;
         sphere.transform.SetParent(this.transform);
+        sphere.layer = handLayerId;
         return sphere;
     }
 
@@ -89,6 +211,8 @@ public class HandTrackingLineRenderer : MonoBehaviour
     {
         GameObject lineObj = new GameObject(name);
         lineObj.transform.SetParent(this.transform);
+        lineObj.layer = LayerMask.NameToLayer("Hand");
+        lineObj.layer = handLayerId;
         LineRenderer line = lineObj.AddComponent<LineRenderer>();
         line.startWidth = 0.002f;
         line.endWidth = 0.002f;
@@ -239,6 +363,7 @@ public class HandTrackingLineRenderer : MonoBehaviour
             receiveThread.Abort();
         if (udpClient != null)
             udpClient.Close();
+        StopPythonScript();
     }
 }
 

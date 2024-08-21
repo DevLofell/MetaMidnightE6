@@ -10,7 +10,7 @@ using Newtonsoft.Json.Linq;
 
 public class GameStateReceiver : MonoBehaviour
 {
-    [SerializeField] private string gameIndex = "Zero";
+    [SerializeField] public string gameIndex = "Zero";
     [SerializeField] private bool runInBackground = true;
 
     private UdpClient udpClient;
@@ -23,16 +23,18 @@ public class GameStateReceiver : MonoBehaviour
     private Process pythonProcess;
     private bool isPythonRunning = false;
 
+    
+
     [System.Serializable]
-    private class GameState
+    public class GameState
     {
         public string currentStage;
         public string stageComplete;
         public string finalComplete;
     }
 
-    private GameState currentGameState = new GameState();
-    private GameState previousGameState = new GameState();
+    public GameState currentGameState = new GameState();
+    public GameState previousGameState = new GameState();
 
     void Start()
     {
@@ -234,6 +236,7 @@ public class GameStateReceiver : MonoBehaviour
         if (currentGameState.currentStage != previousGameState.currentStage)
         {
             UnityEngine.Debug.Log($"Current Stage changed to: {currentGameState.currentStage}");
+
         }
 
         if (currentGameState.stageComplete != previousGameState.stageComplete && currentGameState.stageComplete == "True")
